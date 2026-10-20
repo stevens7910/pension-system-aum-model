@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model AuM III. penzijního pilíře ČR (2026–2040) | APS ČR Baseline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0f172a;
+      --foreground: #f8fafc;
+      --card: #1e293b;
+      --border: #334155;
+      --primary: #3b82f6;
+      --primary-foreground: #ffffff;
+      --secondary: #334155;
+      --secondary-foreground: #f1f5f9;
+      --muted-foreground: #94a3b8;
+    }
+    input[type="range"] {
+      accent-color: var(--primary);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .tab-btn.active {
+      background-color: var(--primary);
+      color: var(--primary-foreground);
+      border-color: var(--primary);
+    }
+    .preset-btn.active {
+      border-color: var(--primary);
+      background-color: color-mix(in srgb, var(--primary) 14%, transparent);
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6 select-none">
+
+  <!-- HEADER -->
+  <header class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 mb-5 shadow-sm">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)]">
+            APS ČR &amp; MF ČR Audited Baseline (2024–2025)
+          </span>
+          <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)]">
+            Horizont 2026–2040
+          </span>
+        </div>
+        <h1 class="text-xl md:text-2xl font-bold tracking-tight text-[var(--foreground)]">
+          Komplexní aktuárský a makroekonomický model AuM III. penzijního pilíře ČR
+        </h1>
+        <p class="text-sm text-[var(--muted-foreground)] mt-1">
+          Dynamická projekce spravovaných aktiv (Transformované fondy PP &amp; Účastnické fondy DPS), příspěvků střadatelů, zaměstnavatelů, státní podpory, tržního zhodnocení a demografických odtoků.
+        </p>
+      </div>
+
+      <!-- DISPLAY MODE & EXPORT -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="inline-flex rounded-lg border border-[var(--border)] bg-[var(--background)] p-1">
+          <button id="btnNominal" onclick="setPriceMode('nominal')" class="px-3 py-1.5 text-xs font-semibold rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] transition">
+            Nominální Kč
+          </button>
+          <button id="btnReal" onclick="setPriceMode('real')" class="px-3 py-1.5 text-xs font-semibold rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+            Reálné Kč (ceny 2026)
+          </button>
+        </div>
+        <button onclick="exportCSV()" class="px-3.5 py-2 text-xs font-semibold rounded-lg border border-[var(--border)] bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90 transition flex items-center gap-1.5">
+          <span>⬇ Export CSV (2024–2040)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCENARIO PRESETS -->
+    <div class="mt-4 pt-4 border-t border-[var(--border)] flex flex-wrap items-center gap-2">
+      <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mr-1">Makro &amp; Legislativní scénáře:</span>
+      <button onclick="applyPreset('base')" id="preset-base" class="preset-btn active px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] transition">
+        📊 Základní scénář (Konsenzus ČNB / APS)
+      </button>
+      <button onclick="applyPreset('bull')" id="preset-bull" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] transition">
+        🚀 Dynamický růst &amp; Reforma „Lepší penzijko“
+      </button>
+      <button onclick="applyPreset('autoenroll')" id="preset-autoenroll" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] transition">
+        🏛️ Automatický vstup (Auto-enrollment 2028)
+      </button>
+      <button onclick="applyPreset('stagflation')" id="preset-stagflation" class="preset-btn px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] transition">
+        ⚠️ Stagflace &amp; Konkurence DIP
+      </button>
+      <button onclick="resetToBase()" class="ml-auto px-2.5 py-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] underline">
+        Obnovit výchozí parametry
+      </button>
+    </div>
+  </header>
+
+  <!-- KPI SUMMARY ROW -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-5">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-[var(--muted-foreground)]">Auditovaný základ (konec 2025)</span>
+        <span class="text-xs px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] font-medium">APS ČR</span>
+      </div>
+      <div class="text-2xl font-bold mt-1.5" id="kpiBaseAuM">659,9 mld. Kč</div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1 flex justify-between">
+        <span>TF: <strong class="text-[var(--foreground)]">348,7 mld.</strong></span>
+        <span>DPS: <strong class="text-[var(--foreground)]">311,2 mld.</strong></span>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-0.5">
+        Rok 2024 (audit): 605,0 mld. Kč
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-[var(--muted-foreground)]" id="kpi2040Title">Projekce AuM (2040)</span>
+        <span class="text-xs px-2 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold" id="kpiCAGR">+6,8 % p.a.</span>
+      </div>
+      <div class="text-2xl font-bold mt-1.5" id="kpi2040AuM">1 785,4 mld. Kč</div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1 flex justify-between">
+        <span id="kpi2040NominalSub">Nárůst vs. 2025: +170 %</span>
+        <span id="kpiGDPShare" class="font-medium text-[var(--foreground)]">~14,2 % HDP</span>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-0.5" id="kpiCrossoverYear">
+        Bod obratu (DPS &gt; TF): <strong>rok 2026</strong>
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-[var(--muted-foreground)]">Struktura fondů v roce 2040</span>
+        <span class="text-xs font-semibold text-[var(--foreground)]" id="kpi2040DpsShare">91,4 % DPS</span>
+      </div>
+      <div class="text-lg font-bold mt-1.5 flex items-baseline justify-between">
+        <span>DPS: <span id="kpi2040DpsAuM">1 631,8 mld.</span></span>
+      </div>
+      <div class="w-full h-2 bg-[var(--secondary)] rounded-full overflow-hidden mt-2 flex">
+        <div id="barDpsShare" class="bg-blue-500 h-full" style="width: 91%"></div>
+        <div id="barTfShare" class="bg-amber-500 h-full" style="width: 9%"></div>
+      </div>
+      <div class="text-xs text-[var(--muted-foreground)] mt-1.5 flex justify-between">
+        <span>Transformované (TF): <strong id="kpi2040TfAuM" class="text-[var(--foreground)]">153,6 mld.</strong></span>
+        <span id="kpi2040Participants">3,92 mil. úč.</span>
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-[var(--muted-foreground)]">Kumulativní zdroje růstu (26–40)</span>
+      </div>
+      <div class="mt-1.5 space-y-1 text-xs">
+        <div class="flex justify-between">
+          <span class="text-[var(--muted-foreground)]">Vlastní + Zaměstnavatel + Stát:</span>
+          <strong class="text-[var(--foreground)]" id="kpiCumInflows">+1 342 mld. Kč</strong>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-[var(--muted-foreground)]">Čisté tržní zhodnocení (po popl.):</span>
+          <strong class="text-emerald-500 font-semibold" id="kpiCumReturns">+712 mld. Kč</strong>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-[var(--muted-foreground)]">Vyplacené dávky a odbytné:</span>
+          <strong class="text-rose-500 font-semibold" id="kpiCumOutflows">−928 mld. Kč</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-[var(--muted-foreground)]">Průměrná úložka DPS (2026 → 2040)</span>
+      </div>
+      <div class="mt-1.5 space-y-1 text-xs">
+        <div class="flex justify-between">
+          <span class="text-[var(--muted-foreground)]">Účastník (měsíčně):</span>
+          <strong class="text-[var(--foreground)]" id="kpiAvgClientContrib">940 → 1 890 Kč</strong>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-[var(--muted-foreground)]">Zaměstnavatel (měsíčně):</span>
+          <strong class="text-[var(--foreground)]" id="kpiAvgEmpContrib">1 230 → 2 480 Kč</strong>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-[var(--muted-foreground)]">Celkový roční přítok (2040):</span>
+          <strong class="text-[var(--foreground)]" id="kpi2040AnnualInflow">118,4 mld. Kč/rok</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <aside class="lg:col-span-4 space-y-4">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-[var(--foreground)]">Vstupní parametry modelu</h2>
+          <span class="text-xs text-[var(--muted-foreground)]">Real-time přepočet</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5 mb-4 p-1 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          <button onclick="switchParamTab('macro')" id="ptab-macro" class="tab-btn active px-2.5 py-1.5 text-xs font-semibold rounded-md transition text-left">
+            1. Makro &amp; Trhy
+          </button>
+          <button onclick="switchParamTab('contribs')" id="ptab-contribs" class="tab-btn px-2.5 py-1.5 text-xs font-semibold rounded-md transition text-left">
+            2. Úložky &amp; Zaměstn.
+          </button>
+          <button onclick="switchParamTab('demography')" id="ptab-demography" class="tab-btn px-2.5 py-1.5 text-xs font-semibold rounded-md transition text-left">
+            3. Kmen TF &amp; DPS
+          </button>
+          <button onclick="switchParamTab('funds')" id="ptab-funds" class="tab-btn px-2.5 py-1.5 text-xs font-semibold rounded-md transition text-left">
+            4. Alokace &amp; Poplatky
+          </button>
+        </div>
+
+        <!-- TAB 1: MACRO & MARKETS -->
+        <div id="ppanel-macro" class="space-y-3.5">
+          <div class="p-2.5 rounded-lg bg-[var(--secondary)]/50 border border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+            Makroekonomické parametry určují nominální růst mezd, valorizaci úložek, dluhopisové výnosy transformovaných fondů a reálný diskont.
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Průměrná roční inflace (CPI)</label>
+              <span class="font-bold" id="val-inflation">2,3 % p.a.</span>
+            </div>
+            <input type="range" id="inp-inflation" min="1.0" max="6.0" step="0.1" value="2.3" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>1,0 % (Cíl ČNB 2%)</span><span>6,0 %</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Nominální růst průměrné mzdy v ČR</label>
+              <span class="font-bold" id="val-wageGrowth">4,8 % p.a.</span>
+            </div>
+            <input type="range" id="inp-wageGrowth" min="2.0" max="8.5" step="0.1" value="4.8" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>2,0 %</span><span>Reálný růst: <strong id="lbl-realWage">+2,5 %</strong></span><span>8,5 %</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Výnos 10Y CZK státních dluhopisů / Repo</label>
+              <span class="font-bold" id="val-bondYield">3,8 % p.a.</span>
+            </div>
+            <input type="range" id="inp-bondYield" min="1.5" max="7.0" step="0.1" value="3.8" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>1,5 %</span><span>Kotva pro TF a Konzerv. DPS</span><span>7,0 %</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Hrubý výnos globálních akcií (Dynamické DPS)</label>
+              <span class="font-bold" id="val-equityReturn">7,8 % p.a.</span>
+            </div>
+            <input type="range" id="inp-equityReturn" min="3.0" max="12.0" step="0.1" value="7.8" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>3,0 % (Medvědí)</span><span>Historický průměr ~8%</span><span>12,0 %</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Hrubý výnos Vyvážených fondů DPS</label>
+              <span class="font-bold" id="val-balancedReturn">5,4 % p.a.</span>
+            </div>
+            <input type="range" id="inp-balancedReturn" min="2.5" max="9.0" step="0.1" value="5.4" oninput="onParamChange()" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Hrubý výnos Transformovaných fondů (TF)</label>
+              <span class="font-bold" id="val-tfGrossReturn">2,6 % p.a.</span>
+            </div>
+            <input type="range" id="inp-tfGrossReturn" min="1.0" max="5.0" step="0.1" value="2.6" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>2025 čistý průměr: 1,57 %</span><span>Strop poplatků: 0,8 % + 10 %</span></div>
+          </div>
+
+          <div class="pt-2 border-t border-[var(--border)]">
+            <label class="flex items-center justify-between cursor-pointer text-xs">
+              <span class="font-medium">Simulovat cyklické tržní korekce (každých 6 let)</span>
+              <input type="checkbox" id="inp-marketCycles" onchange="onParamChange()" class="w-4 h-4 rounded">
+            </label>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Vloží akciový pokles (−14 % v r. 2029 a −12 % v r. 2035) s následným zotavením.</p>
+          </div>
+        </div>
+
+        <!-- TAB 2: CONTRIBUTIONS -->
+        <div id="ppanel-contribs" class="space-y-3.5 hidden">
+          <div class="p-2.5 rounded-lg bg-[var(--secondary)]/50 border border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+            Vychází z dat MF ČR/APS ČR: průměrná úložka DPS ~896 Kč (2025), TF ~800 Kč, zaměstnavatel ~1 180 Kč u 1,72 mil. účastníků.
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Výchozí úložka střadatele v DPS (2026)</label>
+              <span class="font-bold" id="val-clientDps2026">940 Kč/měs.</span>
+            </div>
+            <input type="range" id="inp-clientDps2026" min="750" max="1500" step="10" value="940" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>Max. SP (340 Kč) při 1 700 Kč</span><span>Daň. opt. 4 000 Kč</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Výchozí úložka střadatele v TF (2026)</label>
+              <span class="font-bold" id="val-clientTf2026">810 Kč/měs.</span>
+            </div>
+            <input type="range" id="inp-clientTf2026" min="600" max="1300" step="10" value="810" oninput="onParamChange()" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Elasticita růstu úložky střadatele vůči mzdám</label>
+              <span class="font-bold" id="val-clientElasticity">85 %</span>
+            </div>
+            <input type="range" id="inp-clientElasticity" min="30" max="130" step="5" value="85" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>30 % (Rigidní úložky)</span><span>100 % = roste tempem mezd</span></div>
+          </div>
+
+          <div class="pt-2 border-t border-[var(--border)]">
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Výchozí příspěvek zaměstnavatele (2026)</label>
+              <span class="font-bold" id="val-empContrib2026">1 230 Kč/měs.</span>
+            </div>
+            <input type="range" id="inp-empContrib2026" min="900" max="2200" step="10" value="1230" oninput="onParamChange()" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Elasticita příspěvku zaměstnavatele ke mzdám</label>
+              <span class="font-bold" id="val-empElasticity">100 %</span>
+            </div>
+            <input type="range" id="inp-empElasticity" min="50" max="140" step="5" value="100" oninput="onParamChange()" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Cílový podíl účastníků DPS se zaměstnavatelem (2040)</label>
+              <span class="font-bold" id="val-empPenetration2040">52 %</span>
+            </div>
+            <input type="range" id="inp-empPenetration2040" min="38" max="75" step="1" value="52" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>2025 v DPS: 41,3 % (899 tis.)</span><span>Celkem 2025: 1,72 mil.</span></div>
+          </div>
+
+          <div class="pt-2 border-t border-[var(--border)] space-y-2">
+            <label class="flex items-center justify-between cursor-pointer text-xs">
+              <span class="font-medium">Zákon č. 324/2025 Sb. (4 % ze mzdy – rizikové profese)</span>
+              <input type="checkbox" id="inp-mandatoryRiskEmp" checked onchange="onParamChange()" class="w-4 h-4 rounded">
+            </label>
+            <label class="flex items-center justify-between cursor-pointer text-xs">
+              <span class="font-medium">Pravidelná valorizace limitů státního příspěvku</span>
+              <input type="checkbox" id="inp-indexStateSupport" onchange="onParamChange()" class="w-4 h-4 rounded">
+            </label>
+          </div>
+        </div>
+
+        <!-- TAB 3: DEMOGRAPHY -->
+        <div id="ppanel-demography" class="space-y-3.5 hidden">
+          <div class="p-2.5 rounded-lg bg-[var(--secondary)]/50 border border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+            Transformované fondy (1,71 mil. úč. na konci 2025) jsou od r. 2013 uzavřené. Kmen klesá odchodem do penze a přechody (migrací) do DPS.
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Roční míra přechodu (migrace) z TF do DPS</label>
+              <span class="font-bold" id="val-tfToDpsMigration">4,2 % kmene/rok</span>
+            </div>
+            <input type="range" id="inp-tfToDpsMigration" min="1.0" max="10.0" step="0.2" value="4.2" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>1 % (Pomalý přeliv)</span><span>Převádí i naspořené AuM</span><span>10 %</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Roční výplaty dávek a odbytného z TF (% z AuM)</label>
+              <span class="font-bold" id="val-tfOutflowRate">6,4 % AuM/rok</span>
+            </div>
+            <input type="range" id="inp-tfOutflowRate" min="3.5" max="12.0" step="0.2" value="6.4" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>Stárnutí kmene TF + odchod prac. důchodců bez SP</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Organická akvizice nových smluv DPS</label>
+              <span class="font-bold" id="val-dpsNewAcq">115 tis. úč./rok</span>
+            </div>
+            <input type="range" id="inp-dpsNewAcq" min="40" max="220" step="5" value="115" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>40 tis. (Útlum / DIP)</span><span>220 tis. (Silná distribuce)</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Roční výplaty a odchody v DPS (% z AuM)</label>
+              <span class="font-bold" id="val-dpsOutflowRate">3,3 % AuM/rok</span>
+            </div>
+            <input type="range" id="inp-dpsOutflowRate" min="1.5" max="7.5" step="0.1" value="3.3" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>Mladší kmen DPS + 10letá vázací doba od 2024</span></div>
+          </div>
+
+          <div class="pt-2 border-t border-[var(--border)]">
+            <label class="flex items-center justify-between cursor-pointer text-xs">
+              <span class="font-medium">Zavedení Auto-enrollmentu (povinný vstup od 2028)</span>
+              <input type="checkbox" id="inp-autoEnrollment" onchange="onParamChange()" class="w-4 h-4 rounded">
+            </label>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Přidá ~450 tis. nových účastníků DPS v letech 2028–2031 (inspirace Polsko PPK / UK Nest).</p>
+          </div>
+        </div>
+
+        <!-- TAB 4: FUND ALLOCATION & FEES -->
+        <div id="ppanel-funds" class="space-y-3.5 hidden">
+          <div class="p-2.5 rounded-lg bg-[var(--secondary)]/50 border border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+            Struktura DPS se rychle přesouvá z konzervativních do dynamických (akciových) a alternativních fondů, což zásadně akceleruje AuM.
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Podíl Dynamických + Alt. fondů v DPS (2026)</label>
+              <span class="font-bold" id="val-dynShare2026">54 %</span>
+            </div>
+            <input type="range" id="inp-dynShare2026" min="35" max="70" step="1" value="54" oninput="onParamChange()" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Cílový podíl Dynamických + Alt. fondů v DPS (2040)</label>
+              <span class="font-bold" id="val-dynShare2040">74 %</span>
+            </div>
+            <input type="range" id="inp-dynShare2040" min="45" max="90" step="1" value="74" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>Nové příspěvky jdou z &gt;80 % do růstových strategií</span></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label class="font-medium">Podíl Konzervativních fondů v DPS (2040)</label>
+              <span class="font-bold" id="val-consShare2040">8 %</span>
+            </div>
+            <input type="range" id="inp-consShare2040" min="3" max="25" step="1" value="8" oninput="onParamChange()" class="w-full">
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)]"><span>Zbytek tvoří Vyvážené fondy: <strong id="lbl-balShare2040">18 %</strong></span></div>
+          </div>
+
+          <div class="pt-2 border-t border-[var(--border)]">
+            <label class="flex items-center justify-between cursor-pointer text-xs">
+              <span class="font-medium">Reforma poplatků „Lepší penzijko“ (od r. 2027)</span>
+              <input type="checkbox" id="inp-feeReform" onchange="onParamChange()" class="w-4 h-4 rounded">
+            </label>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Snížení stropu správcovského poplatku DPS z 1,0 % na 0,55 % p.a. a snížení performance fee z 15 % na 5 %.</p>
+          </div>
+
+          <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs space-y-1">
+            <div class="font-semibold text-[var(--foreground)]">Efektivní nákladovost (TER) a dopad:</div>
+            <div class="flex justify-between text-[var(--muted-foreground)]">
+              <span>Průměrný čistý výnos DPS (2026 → 2040):</span>
+              <strong class="text-[var(--foreground)]" id="lbl-netDpsYield">5,3 % → 6,1 % p.a.</strong>
+            </div>
+            <div class="flex justify-between text-[var(--muted-foreground)]">
+              <span>Průměrný čistý výnos TF:</span>
+              <strong class="text-[var(--foreground)]" id="lbl-netTfYield">1,6 % p.a.</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUDITED BASELINE CARD -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2.5">
+          Auditovaná výchozí základna (APS ČR &amp; MF ČR)
+        </h3>
+        <div class="space-y-2 text-xs">
+          <div class="grid grid-cols-3 font-semibold border-b border-[var(--border)] pb-1 text-[var(--muted-foreground)]">
+            <span>Ukazatel</span>
+            <span class="text-right">31.12.2024</span>
+            <span class="text-right">31.12.2025</span>
+          </div>
+          <div class="grid grid-cols-3">
+            <span class="text-[var(--muted-foreground)]">Celkové AuM:</span>
+            <span class="text-right font-medium">605,01 mld.</span>
+            <span class="text-right font-bold text-[var(--foreground)]">659,85 mld.</span>
+          </div>
+          <div class="grid grid-cols-3">
+            <span class="text-[var(--muted-foreground)]">• Transformované (TF):</span>
+            <span class="text-right">376,46 mld.</span>
+            <span class="text-right font-medium">348,70 mld.</span>
+          </div>
+          <div class="grid grid-cols-3">
+            <span class="text-[var(--muted-foreground)]">• Účastnické (DPS):</span>
+            <span class="text-right">228,54 mld.</span>
+            <span class="text-right font-medium">311,15 mld.</span>
+          </div>
+          <div class="grid grid-cols-3 pt-1 border-t border-[var(--border)]">
+            <span class="text-[var(--muted-foreground)]">Počet účastníků:</span>
+            <span class="text-right">3 982 tis.</span>
+            <span class="text-right font-medium">3 894 tis.</span>
+          </div>
+          <div class="grid grid-cols-3">
+            <span class="text-[var(--muted-foreground)]">• z toho v DPS:</span>
+            <span class="text-right">2 000 tis.</span>
+            <span class="text-right font-medium">2 179 tis.</span>
+          </div>
+          <div class="grid grid-cols-3">
+            <span class="text-[var(--muted-foreground)]">• se zaměstnavatelem:</span>
+            <span class="text-right">1 716 tis.</span>
+            <span class="text-right font-medium">1 723 tis.</span>
+          </div>
+          <div class="grid grid-cols-3 pt-1 border-t border-[var(--border)]">
+            <span class="text-[var(--muted-foreground)]">Prům. úložka (DPS/TF):</span>
+            <span class="text-right">896 / 795 Kč</span>
+            <span class="text-right font-medium">915 / 805 Kč</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN AREA -->
+    <main class="lg:col-span-8 space-y-5">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-[var(--foreground)]">
+              Vývoj celkového objemu aktiv (AuM) 2024–2040: Transformované fondy vs. DPS
+            </h2>
+            <p class="text-xs text-[var(--muted-foreground)]">
+              Rozpad na Transformované fondy (PP) a jednotlivé strategie Doplňkového penzijního spoření (DPS) v mld. Kč
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-1.5 text-xs cursor-pointer px-2.5 py-1 rounded-md border border-[var(--border)] bg-[var(--background)]">
+              <input type="checkbox" id="chkShowBand" checked onchange="renderAllCharts()" class="w-3.5 h-3.5">
+              <span>Pásmo nejistoty (P10–P90)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 text-xs mb-3">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span> Transformované fondy (TF)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-sky-500 inline-block"></span> DPS Konzervativní</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-indigo-500 inline-block"></span> DPS Vyvážené</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> DPS Dynamické &amp; Alternativní</span>
+          <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-rose-500 inline-block"></span> Celkové AuM (medián)</span>
+        </div>
+
+        <div class="relative w-full h-80">
+          <canvas id="chartMainAuM" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+          <h3 class="text-sm font-bold text-[var(--foreground)]">
+            Roční dekompozice změny AuM (Cash-Flow &amp; Výnos)
+          </h3>
+          <p class="text-xs text-[var(--muted-foreground)] mb-3">
+            Příspěvky (klient + zaměstnavatel + stát), tržní zhodnocení a výplaty dávek (mld. Kč/rok)
+          </p>
+          <div class="flex flex-wrap gap-3 text-xs mb-2">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block"></span> Příspěvky celkem</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> Čistý výnos</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> Výplaty &amp; Odbytné</span>
+          </div>
+          <div class="relative w-full h-60">
+            <canvas id="chartCashFlow" class="w-full h-full"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-sm font-bold text-[var(--foreground)]" id="subChartTitle">
+              Vývoj průměrné měsíční úložky (Kč/měs.)
+            </h3>
+            <div class="inline-flex rounded border border-[var(--border)] bg-[var(--background)] p-0.5">
+              <button id="btnSubContrib" onclick="setSubChartMode('contrib')" class="px-2 py-0.5 text-xs font-semibold rounded bg-[var(--primary)] text-[var(--primary-foreground)]">Úložky (Kč)</button>
+              <button id="btnSubPartic" onclick="setSubChartMode('partic')" class="px-2 py-0.5 text-xs font-semibold rounded text-[var(--muted-foreground)]">Účastníci (mil.)</button>
+            </div>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] mb-3" id="subChartDesc">
+            Růst průměrného příspěvku střadatele v DPS, v TF a příspěvku zaměstnavatele
+          </p>
+          <div class="relative w-full h-60">
+            <canvas id="chartSecondary" class="w-full h-full"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-[var(--foreground)]">
+              Most (Waterfall) přírůstku AuM mezi lety 2025 a 2040
+            </h3>
+            <p class="text-xs text-[var(--muted-foreground)]">
+              Kolik miliard Kč přinesou jednotlivé faktory k celkovému nárůstu spravovaného majetku do roku 2040
+            </p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-xs" id="waterfallCards"></div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-[var(--foreground)]">
+              Detailní datová matice modelu (2024–2040)
+            </h3>
+            <p class="text-xs text-[var(--muted-foreground)]">
+              Kompletní roční bilance: auditovaná historie (2024–2025) a modelová projekce (2026–2040)
+            </p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)]" id="tableModeLabel">Zobrazeno v nominálních cenách (mld. Kč)</span>
+        </div>
+
+        <div class="overflow-x-auto custom-scroll border border-[var(--border)] rounded-lg">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-[var(--secondary)] text-[var(--secondary-foreground)] border-b border-[var(--border)]">
+                <th class="py-2.5 px-3 font-semibold sticky left-0 bg-[var(--secondary)]">Rok</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Celkem AuM (mld.)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">TF AuM (mld.)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">DPS AuM (mld.)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Podíl DPS</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Účastníci (tis.)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Úložka DPS (Kč)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Zaměstn. (Kč)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Přítoky (mld.)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Čistý výnos (mld.)</th>
+                <th class="py-2.5 px-2.5 font-semibold text-right">Odtoky (mld.)</th>
+              </tr>
+            </thead>
+            <tbody id="modelTableBody" class="divide-y divide-[var(--border)]"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const HISTORICAL_DATA = [
+      {
+        year: 2024,
+        status: 'Audit (APS ČR)',
+        tfAuM: 376.462,
+        dpsAuM: 228.543,
+        dpsConsAuM: 58.2,
+        dpsBalAuM: 64.0,
+        dpsDynAuM: 106.343,
+        totalAuM: 605.005,
+        tfParticipants: 1982.4,
+        dpsParticipants: 1999.7,
+        totalParticipants: 3982.1,
+        empParticipants: 1715.5,
+        avgClientDps: 896,
+        avgClientTf: 795,
+        avgEmpContrib: 1140,
+        inflowClient: 40.4,
+        inflowEmp: 23.2,
+        inflowState: 6.1,
+        totalInflow: 69.7,
+        netReturn: 24.8,
+        totalOutflow: 49.5,
+        migratedAuM: 18.2
+      },
+      {
+        year: 2025,
+        status: 'Audit (APS ČR)',
+        tfAuM: 348.700,
+        dpsAuM: 311.151,
+        dpsConsAuM: 61.5,
+        dpsBalAuM: 82.0,
+        dpsDynAuM: 167.651,
+        totalAuM: 659.851,
+        tfParticipants: 1714.8,
+        dpsParticipants: 2179.2,
+        totalParticipants: 3894.0,
+        empParticipants: 1723.1,
+        avgClientDps: 915,
+        avgClientTf: 805,
+        avgEmpContrib: 1185,
+        inflowClient: 41.2,
+        inflowEmp: 24.5,
+        inflowState: 5.8,
+        totalInflow: 71.5,
+        netReturn: 38.4,
+        totalOutflow: 55.0,
+        migratedAuM: 23.5
+      }
+    ];
+
+    let priceMode = 'nominal';
+    let subChartMode = 'contrib';
+    let simulationResults = [];
+
+    const PRESETS = {
+      base: {
+        inflation: 2.3,
+        wageGrowth: 4.8,
+        bondYield: 3.8,
+        equityReturn: 7.8,
+        balancedReturn: 5.4,
+        tfGrossReturn: 2.6,
+        marketCycles: false,
+        clientDps2026: 940,
+        clientTf2026: 810,
+        clientElasticity: 85,
+        empContrib2026: 1230,
+        empElasticity: 100,
+        empPenetration2040: 52,
+        mandatoryRiskEmp: true,
+        indexStateSupport: false,
+        tfToDpsMigration: 4.2,
+        tfOutflowRate: 6.4,
+        dpsNewAcq: 115,
+        dpsOutflowRate: 3.3,
+        autoEnrollment: false,
+        dynShare2026: 54,
+        dynShare2040: 74,
+        consShare2040: 8,
+        feeReform: false
+      },
+      bull: {
+        inflation: 2.2,
+        wageGrowth: 5.4,
+        bondYield: 3.9,
+        equityReturn: 8.8,
+        balancedReturn: 6.0,
+        tfGrossReturn: 2.8,
+        marketCycles: false,
+        clientDps2026: 980,
+        clientTf2026: 820,
+        clientElasticity: 100,
+        empContrib2026: 1280,
+        empElasticity: 110,
+        empPenetration2040: 60,
+        mandatoryRiskEmp: true,
+        indexStateSupport: true,
+        tfToDpsMigration: 5.8,
+        tfOutflowRate: 6.2,
+        dpsNewAcq: 135,
+        dpsOutflowRate: 3.0,
+        autoEnrollment: false,
+        dynShare2026: 56,
+        dynShare2040: 82,
+        consShare2040: 6,
+        feeReform: true
+      },
+      autoenroll: {
+        inflation: 2.3,
+        wageGrowth: 4.9,
+        bondYield: 3.8,
+        equityReturn: 7.8,
+        balancedReturn: 5.4,
+        tfGrossReturn: 2.6,
+        marketCycles: false,
+        clientDps2026: 950,
+        clientTf2026: 810,
+        clientElasticity: 90,
+        empContrib2026: 1250,
+        empElasticity: 105,
+        empPenetration2040: 66,
+        mandatoryRiskEmp: true,
+        indexStateSupport: true,
+        tfToDpsMigration: 5.0,
+        tfOutflowRate: 6.4,
+        dpsNewAcq: 130,
+        dpsOutflowRate: 3.1,
+        autoEnrollment: true,
+        dynShare2026: 55,
+        dynShare2040: 78,
+        consShare2040: 7,
+        feeReform: true
+      },
+      stagflation: {
+        inflation: 4.1,
+        wageGrowth: 4.2,
+        bondYield: 4.8,
+        equityReturn: 5.6,
+        balancedReturn: 4.2,
+        tfGrossReturn: 2.4,
+        marketCycles: true,
+        clientDps2026: 910,
+        clientTf2026: 790,
+        clientElasticity: 65,
+        empContrib2026: 1190,
+        empElasticity: 80,
+        empPenetration2040: 44,
+        mandatoryRiskEmp: true,
+        indexStateSupport: false,
+        tfToDpsMigration: 3.2,
+        tfOutflowRate: 7.8,
+        dpsNewAcq: 75,
+        dpsOutflowRate: 4.4,
+        autoEnrollment: false,
+        dynShare2026: 52,
+        dynShare2040: 65,
+        consShare2040: 12,
+        feeReform: false
+      }
+    };
+
+    function getParams() {
+      return {
+        inflation: parseFloat(document.getElementById('inp-inflation').value),
+        wageGrowth: parseFloat(document.getElementById('inp-wageGrowth').value),
+        bondYield: parseFloat(document.getElementById('inp-bondYield').value),
+        equityReturn: parseFloat(document.getElementById('inp-equityReturn').value),
+        balancedReturn: parseFloat(document.getElementById('inp-balancedReturn').value),
+        tfGrossReturn: parseFloat(document.getElementById('inp-tfGrossReturn').value),
+        marketCycles: document.getElementById('inp-marketCycles').checked,
+        clientDps2026: parseFloat(document.getElementById('inp-clientDps2026').value),
+        clientTf2026: parseFloat(document.getElementById('inp-clientTf2026').value),
+        clientElasticity: parseFloat(document.getElementById('inp-clientElasticity').value),
+        empContrib2026: parseFloat(document.getElementById('inp-empContrib2026').value),
+        empElasticity: parseFloat(document.getElementById('inp-empElasticity').value),
+        empPenetration2040: parseFloat(document.getElementById('inp-empPenetration2040').value),
+        mandatoryRiskEmp: document.getElementById('inp-mandatoryRiskEmp').checked,
+        indexStateSupport: document.getElementById('inp-indexStateSupport').checked,
+        tfToDpsMigration: parseFloat(document.getElementById('inp-tfToDpsMigration').value),
+        tfOutflowRate: parseFloat(document.getElementById('inp-tfOutflowRate').value),
+        dpsNewAcq: parseFloat(document.getElementById('inp-dpsNewAcq').value),
+        dpsOutflowRate: parseFloat(document.getElementById('inp-dpsOutflowRate').value),
+        autoEnrollment: document.getElementById('inp-autoEnrollment').checked,
+        dynShare2026: parseFloat(document.getElementById('inp-dynShare2026').value),
+        dynShare2040: parseFloat(document.getElementById('inp-dynShare2040').value),
+        consShare2040: parseFloat(document.getElementById('inp-consShare2040').value),
+        feeReform: document.getElementById('inp-feeReform').checked
+      };
+    }
+
+    function updateParamLabels(p) {
+      document.getElementById('val-inflation').textContent = p.inflation.toFixed(1).replace('.', ',') + ' % p.a.';
+      document.getElementById('val-wageGrowth').textContent = p.wageGrowth.toFixed(1).replace('.', ',') + ' % p.a.';
+      const realWage = p.wageGrowth - p.inflation;
+      document.getElementById('lbl-realWage').textContent = (realWage >= 0 ? '+' : '') + realWage.toFixed(1).replace('.', ',') + ' %';
+      document.getElementById('val-bondYield').textContent = p.bondYield.toFixed(1).replace('.', ',') + ' % p.a.';
+      document.getElementById('val-equityReturn').textContent = p.equityReturn.toFixed(1).replace('.', ',') + ' % p.a.';
+      document.getElementById('val-balancedReturn').textContent = p.balancedReturn.toFixed(1).replace('.', ',') + ' % p.a.';
+      document.getElementById('val-tfGrossReturn').textContent = p.tfGrossReturn.toFixed(1).replace('.', ',') + ' % p.a.';
+
+      document.getElementById('val-clientDps2026').textContent = Math.round(p.clientDps2026).toLocaleString('cs-CZ') + ' Kč/měs.';
+      document.getElementById('val-clientTf2026').textContent = Math.round(p.clientTf2026).toLocaleString('cs-CZ') + ' Kč/měs.';
+      document.getElementById('val-clientElasticity').textContent = Math.round(p.clientElasticity) + ' %';
+      document.getElementById('val-empContrib2026').textContent = Math.round(p.empContrib2026).toLocaleString('cs-CZ') + ' Kč/měs.';
+      document.getElementById('val-empElasticity').textContent = Math.round(p.empElasticity) + ' %';
+      document.getElementById('val-empPenetration2040').textContent = Math.round(p.empPenetration2040) + ' %';
+
+      document.getElementById('val-tfToDpsMigration').textContent = p.tfToDpsMigration.toFixed(1).replace('.', ',') + ' % kmene/rok';
+      document.getElementById('val-tfOutflowRate').textContent = p.tfOutflowRate.toFixed(1).replace('.', ',') + ' % AuM/rok';
+      document.getElementById('val-dpsNewAcq').textContent = Math.round(p.dpsNewAcq) + ' tis. úč./rok';
+      document.getElementById('val-dpsOutflowRate').textContent = p.dpsOutflowRate.toFixed(1).replace('.', ',') + ' % AuM/rok';
+
+      document.getElementById('val-dynShare2026').textContent = Math.round(p.dynShare2026) + ' %';
+      document.getElementById('val-dynShare2040').textContent = Math.round(p.dynShare2040) + ' %';
+      document.getElementById('val-consShare2040').textContent = Math.round(p.consShare2040) + ' %';
+      const balShare2040 = Math.max(0, 100 - p.dynShare2040 - p.consShare2040);
+      document.getElementById('lbl-balShare2040').textContent = Math.round(balShare2040) + ' %';
+    }
+
+    function switchParamTab(tab) {
+      ['macro', 'contribs', 'demography', 'funds'].forEach(t => {
+        document.getElementById('ptab-' + t).classList.toggle('active', t === tab);
+        document.getElementById('ppanel-' + t).classList.toggle('hidden', t !== tab);
+      });
+    }
+
+    function applyPreset(name) {
+      const preset = PRESETS[name];
+      if (!preset) return;
+      Object.keys(preset).forEach(k => {
+        const el = document.getElementById('inp-' + k);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = preset[k];
+        else el.value = preset[k];
+      });
+      document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('preset-' + name);
+      if (activeBtn) activeBtn.classList.add('active');
+      onParamChange(false);
+    }
+
+    function resetToBase() {
+      applyPreset('base');
+    }
+
+    function setPriceMode(mode) {
+      priceMode = mode;
+      const btnNom = document.getElementById('btnNominal');
+      const btnReal = document.getElementById('btnReal');
+      if (mode === 'nominal') {
+        btnNom.className = 'px-3 py-1.5 text-xs font-semibold rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] transition';
+        btnReal.className = 'px-3 py-1.5 text-xs font-semibold rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition';
+        document.getElementById('tableModeLabel').textContent = 'Zobrazeno v nominálních cenách (mld. Kč)';
+      } else {
+        btnReal.className = 'px-3 py-1.5 text-xs font-semibold rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] transition';
+        btnNom.className = 'px-3 py-1.5 text-xs font-semibold rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition';
+        document.getElementById('tableModeLabel').textContent = 'Zobrazeno v reálných cenách roku 2026 (mld. Kč, očištěno o inflaci)';
+      }
+      updateDashboard();
+    }
+
+    function setSubChartMode(mode) {
+      subChartMode = mode;
+      const b1 = document.getElementById('btnSubContrib');
+      const b2 = document.getElementById('btnSubPartic');
+      if (mode === 'contrib') {
+        b1.className = 'px-2 py-0.5 text-xs font-semibold rounded bg-[var(--primary)] text-[var(--primary-foreground)]';
+        b2.className = 'px-2 py-0.5 text-xs font-semibold rounded text-[var(--muted-foreground)]';
+        document.getElementById('subChartTitle').textContent = 'Vývoj průměrné měsíční úložky (Kč/měs.)';
+        document.getElementById('subChartDesc').textContent = 'Růst průměrného příspěvku střadatele v DPS, v TF a příspěvku zaměstnavatele';
+      } else {
+        b2.className = 'px-2 py-0.5 text-xs font-semibold rounded bg-[var(--primary)] text-[var(--primary-foreground)]';
+        b1.className = 'px-2 py-0.5 text-xs font-semibold rounded text-[var(--muted-foreground)]';
+        document.getElementById('subChartTitle').textContent = 'Vývoj počtu účastníků (v tisících osob)';
+        document.getElementById('subChartDesc').textContent = 'Účastníci v DPS, Transformovaných fondech (TF) a účastníci s příspěvkem zaměstnavatele';
+      }
+      renderSecondaryChart();
+    }
+
+    function runModel(p) {
+      const rows = [];
+      HISTORICAL_DATA.forEach(h => {
+        rows.push({
+          ...h,
+          deflator2026: 1.0,
+          p10AuM: h.totalAuM,
+          p90AuM: h.totalAuM,
+          netDpsYieldPct: h.year === 2025 ? 9.8 : 7.4,
+          netTfYieldPct: h.year === 2025 ? 1.57 : 1.85
+        });
+      });
+
+      let tfAuM = HISTORICAL_DATA[1].tfAuM;
+      let dpsAuM = HISTORICAL_DATA[1].dpsAuM;
+      let tfPart = HISTORICAL_DATA[1].tfParticipants;
+      let dpsPart = HISTORICAL_DATA[1].dpsParticipants;
+
+      let avgClientDps = p.clientDps2026;
+      let avgClientTf = p.clientTf2026;
+      let avgEmpContrib = p.empContrib2026;
+
+      let dpsEmpPen = 0.413;
+      let tfEmpPen = 0.480;
+
+      let nominalGDP = 8050;
+      let cumInflationFactor = 1.0;
+
+      for (let year = 2026; year <= 2040; year++) {
+        const t = year - 2026;
+        const progress = t / 14;
+
+        if (year > 2026) {
+          cumInflationFactor *= (1 + p.inflation / 100);
+        }
+        const realGrowthGDP = Math.max(1.0, (p.wageGrowth - p.inflation) * 0.9);
+        nominalGDP *= (1 + (p.inflation + realGrowthGDP) / 100);
+
+        if (year > 2026) {
+          const clientDpsGrowthRate = (p.wageGrowth / 100) * (p.clientElasticity / 100);
+          const clientTfGrowthRate = (p.wageGrowth / 100) * Math.max(0.25, (p.clientElasticity - 20) / 100);
+          const empGrowthRate = (p.wageGrowth / 100) * (p.empElasticity / 100);
+
+          avgClientDps *= (1 + clientDpsGrowthRate);
+          avgClientTf *= (1 + clientTfGrowthRate);
+          avgEmpContrib *= (1 + empGrowthRate);
+        }
+
+        const migRate = p.tfToDpsMigration / 100;
+        const migratedParticipants = tfPart * migRate;
+        const migratedAuM = tfAuM * migRate;
+
+        const ageFactorTf = 1 + t * 0.018;
+        const tfAttritionPartRate = Math.min(0.18, (p.tfOutflowRate / 100) * 0.85 * ageFactorTf);
+        const tfDepartedPart = tfPart * tfAttritionPartRate;
+
+        tfPart = Math.max(120, tfPart - migratedParticipants - tfDepartedPart);
+
+        let autoEnrollBoost = 0;
+        if (p.autoEnrollment && year >= 2028 && year <= 2031) {
+          autoEnrollBoost = year === 2028 ? 160 : (year === 2029 ? 130 : (year === 2030 ? 95 : 65));
+        }
+
+        const dpsAttritionPartRate = (p.dpsOutflowRate / 100) * 0.72;
+        const dpsDepartedPart = dpsPart * dpsAttritionPartRate;
+        dpsPart = dpsPart + p.dpsNewAcq + migratedParticipants + autoEnrollBoost - dpsDepartedPart;
+
+        const totalParticipants = tfPart + dpsPart;
+
+        const targetDpsPen = p.empPenetration2040 / 100;
+        dpsEmpPen = 0.413 + (targetDpsPen - 0.413) * progress;
+        tfEmpPen = Math.max(0.32, 0.480 - 0.008 * t);
+
+        const dpsEmpPart = dpsPart * dpsEmpPen;
+        const tfEmpPart = tfPart * tfEmpPen;
+        const empParticipants = dpsEmpPart + tfEmpPart;
+
+        const riskWorkersBonusMld = p.mandatoryRiskEmp
+          ? (0.115 * 12 * (2150 * Math.pow(1 + p.wageGrowth / 100, t))) / 1000
+          : 0;
+
+        const inflowClientDps = (dpsPart * 12 * avgClientDps) / 1e6;
+        const inflowClientTf = (tfPart * 12 * avgClientTf) / 1e6;
+        const inflowClient = inflowClientDps + inflowClientTf;
+
+        const inflowEmpDps = (dpsEmpPart * 12 * avgEmpContrib) / 1e6 + riskWorkersBonusMld * 0.88;
+        const inflowEmpTf = (tfEmpPart * 12 * (avgEmpContrib * 0.88)) / 1e6 + riskWorkersBonusMld * 0.12;
+        const inflowEmp = inflowEmpDps + inflowEmpTf;
+
+        const stateSupportIndex = p.indexStateSupport ? Math.pow(1 + p.inflation / 100, t) : 1.0;
+        const effStateDpsMonthly = Math.min(340 * stateSupportIndex, Math.max(115, avgClientDps * 0.155));
+        const effStateTfMonthly = Math.min(340 * stateSupportIndex, Math.max(85, avgClientTf * 0.122));
+
+        const inflowStateDps = (dpsPart * 0.89 * 12 * effStateDpsMonthly) / 1e6;
+        const inflowStateTf = (tfPart * 0.68 * 12 * effStateTfMonthly) / 1e6;
+        const inflowState = inflowStateDps + inflowStateTf;
+
+        const totalInflow = inflowClient + inflowEmp + inflowState;
+
+        const effTfOutflowRate = (p.tfOutflowRate / 100) * (1 + t * 0.012);
+        const outflowTf = tfAuM * effTfOutflowRate;
+        const outflowDps = dpsAuM * (p.dpsOutflowRate / 100);
+        const totalOutflow = outflowTf + outflowDps;
+
+        const dynShare = (p.dynShare2026 + (p.dynShare2040 - p.dynShare2026) * progress) / 100;
+        const consShare2026 = 0.195;
+        const consShare = consShare2026 + ((p.consShare2040 / 100) - consShare2026) * progress;
+        const balShare = Math.max(0, 1 - dynShare - consShare);
+
+        const reformActive = p.feeReform && year >= 2027;
+        const feeDynTER = reformActive ? (0.0055 + Math.max(0, p.equityReturn / 100) * 0.05) : (0.010 + Math.max(0, p.equityReturn / 100) * 0.15);
+        const feeBalTER = reformActive ? (0.0050 + Math.max(0, p.balancedReturn / 100) * 0.05) : (0.010 + Math.max(0, p.balancedReturn / 100) * 0.15);
+        const feeConsTER = reformActive ? 0.0035 : (0.004 + Math.max(0, (p.bondYield - 0.5) / 100) * 0.10);
+        const feeTfTER = 0.008 + Math.max(0, p.tfGrossReturn / 100) * 0.10;
+
+        let equityShock = 0;
+        let balShock = 0;
+        if (p.marketCycles) {
+          if (year === 2029) { equityShock = -0.145; balShock = -0.065; }
+          else if (year === 2030) { equityShock = 0.065; balShock = 0.030; }
+          else if (year === 2035) { equityShock = -0.125; balShock = -0.055; }
+          else if (year === 2036) { equityShock = 0.055; balShock = 0.025; }
+        }
+
+        const netDynReturnRate = (p.equityReturn / 100) + equityShock - feeDynTER;
+        const netBalReturnRate = (p.balancedReturn / 100) + balShock - feeBalTER;
+        const netConsReturnRate = ((p.bondYield - 0.4) / 100) - feeConsTER;
+        const netDpsReturnRate = dynShare * netDynReturnRate + balShare * netBalReturnRate + consShare * netConsReturnRate;
+
+        const netTfReturnRate = Math.max(0.0, (p.tfGrossReturn / 100) - feeTfTER);
+
+        const tfBaseForReturn = Math.max(0, tfAuM - migratedAuM + 0.5 * (inflowClientTf + inflowEmpTf + inflowStateTf - outflowTf));
+        const dpsBaseForReturn = Math.max(0, dpsAuM + migratedAuM + 0.5 * (inflowClientDps + inflowEmpDps + inflowStateDps - outflowDps));
+
+        const returnTf = tfBaseForReturn * netTfReturnRate;
+        const returnDps = dpsBaseForReturn * netDpsReturnRate;
+        const netReturn = returnTf + returnDps;
+
+        tfAuM = Math.max(15, tfAuM - migratedAuM + inflowClientTf + inflowEmpTf + inflowStateTf - outflowTf + returnTf);
+        dpsAuM = Math.max(50, dpsAuM + migratedAuM + inflowClientDps + inflowEmpDps + inflowStateDps - outflowDps + returnDps);
+        const totalAuM = tfAuM + dpsAuM;
+
+        const portfolioVol = 0.015 + dynShare * 0.095 + balShare * 0.045;
+        const cumSigma = portfolioVol * Math.sqrt(t + 1) * (dpsAuM / totalAuM);
+        const p10AuM = totalAuM * Math.exp(-1.28 * cumSigma * 0.65);
+        const p90AuM = totalAuM * Math.exp(1.28 * cumSigma * 0.65);
+
+        rows.push({
+          year,
+          status: 'Projekce',
+          tfAuM,
+          dpsAuM,
+          dpsConsAuM: dpsAuM * consShare,
+          dpsBalAuM: dpsAuM * balShare,
+          dpsDynAuM: dpsAuM * dynShare,
+          totalAuM,
+          tfParticipants: tfPart,
+          dpsParticipants: dpsPart,
+          totalParticipants,
+          empParticipants,
+          avgClientDps,
+          avgClientTf,
+          avgEmpContrib,
+          inflowClient,
+          inflowEmp,
+          inflowState,
+          totalInflow,
+          netReturn,
+          totalOutflow,
+          migratedAuM,
+          deflator2026: cumInflationFactor,
+          nominalGDP,
+          p10AuM,
+          p90AuM,
+          netDpsYieldPct: netDpsReturnRate * 100,
+          netTfYieldPct: netTfReturnRate * 100
+        });
+      }
+
+      return rows;
+    }
+
+    function valPrice(row, val) {
+      if (priceMode === 'nominal' || !row.deflator2026) return val;
+      return val / row.deflator2026;
+    }
+
+    function onParamChange(clearPresetHighlight = true) {
+      if (clearPresetHighlight) {
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+      }
+      const p = getParams();
+      updateParamLabels(p);
+      simulationResults = runModel(p);
+      updateDashboard();
+    }
+
+    function fmtMld(v) {
+      return v.toFixed(1).replace('.', ',') + ' mld.';
+    }
+
+    function updateDashboard() {
+      const rows = simulationResults;
+      if (!rows || rows.length === 0) return;
+
+      const r2025 = rows[1];
+      const r2026 = rows[2];
+      const r2040 = rows[rows.length - 1];
+
+      const crossoverRow = rows.find(r => r.dpsAuM >= r.tfAuM);
+      document.getElementById('kpiCrossoverYear').innerHTML = crossoverRow
+        ? `Bod obratu (DPS &gt; TF): <strong>rok ${crossoverRow.year}</strong>`
+        : `Bod obratu (DPS &gt; TF): <strong>po r. 2040</strong>`;
+
+      const aum2040 = valPrice(r2040, r2040.totalAuM);
+      const dps2040 = valPrice(r2040, r2040.dpsAuM);
+      const tf2040 = valPrice(r2040, r2040.tfAuM);
+
+      const cagr = (Math.pow(aum2040 / r2025.totalAuM, 1 / 15) - 1) * 100;
+      const pctGrowth = ((aum2040 / r2025.totalAuM) - 1) * 100;
+      const gdpShare = (r2040.totalAuM / r2040.nominalGDP) * 100;
+
+      document.getElementById('kpi2040Title').textContent = priceMode === 'nominal'
+        ? 'Projekce AuM (2040 nominálně)'
+        : 'Projekce AuM (2040 v cenách 2026)';
+      document.getElementById('kpi2040AuM').textContent = aum2040.toFixed(1).replace('.', ',') + ' mld. Kč';
+      document.getElementById('kpiCAGR').textContent = (cagr >= 0 ? '+' : '') + cagr.toFixed(1).replace('.', ',') + ' % p.a.';
+      document.getElementById('kpi2040NominalSub').textContent = `Nárůst vs. 2025: +${Math.round(pctGrowth)} %`;
+      document.getElementById('kpiGDPShare').textContent = `~${gdpShare.toFixed(1).replace('.', ',')} % HDP`;
+
+      const dpsSharePct = (r2040.dpsAuM / r2040.totalAuM) * 100;
+      document.getElementById('kpi2040DpsShare').textContent = dpsSharePct.toFixed(1).replace('.', ',') + ' % DPS';
+      document.getElementById('kpi2040DpsAuM').textContent = fmtMld(dps2040) + ' Kč';
+      document.getElementById('kpi2040TfAuM').textContent = fmtMld(tf2040);
+      document.getElementById('kpi2040Participants').textContent = (r2040.totalParticipants / 1000).toFixed(2).replace('.', ',') + ' mil. úč.';
+      document.getElementById('barDpsShare').style.width = dpsSharePct.toFixed(1) + '%';
+      document.getElementById('barTfShare').style.width = (100 - dpsSharePct).toFixed(1) + '%';
+
+      let cumInflows = 0, cumReturns = 0, cumOutflows = 0;
+      let cumClient = 0, cumEmp = 0, cumState = 0;
+      for (let i = 2; i < rows.length; i++) {
+        const r = rows[i];
+        cumInflows += valPrice(r, r.totalInflow);
+        cumClient += valPrice(r, r.inflowClient);
+        cumEmp += valPrice(r, r.inflowEmp);
+        cumState += valPrice(r, r.inflowState);
+        cumReturns += valPrice(r, r.netReturn);
+        cumOutflows += valPrice(r, r.totalOutflow);
+      }
+
+      document.getElementById('kpiCumInflows').textContent = '+' + Math.round(cumInflows).toLocaleString('cs-CZ') + ' mld. Kč';
+      document.getElementById('kpiCumReturns').textContent = '+' + Math.round(cumReturns).toLocaleString('cs-CZ') + ' mld. Kč';
+      document.getElementById('kpiCumOutflows').textContent = '−' + Math.round(cumOutflows).toLocaleString('cs-CZ') + ' mld. Kč';
+
+      const c2040 = Math.round(valPrice(r2040, r2040.avgClientDps));
+      const e2040 = Math.round(valPrice(r2040, r2040.avgEmpContrib));
+      document.getElementById('kpiAvgClientContrib').textContent = `${Math.round(r2026.avgClientDps).toLocaleString('cs-CZ')} → ${c2040.toLocaleString('cs-CZ')} Kč`;
+      document.getElementById('kpiAvgEmpContrib').textContent = `${Math.round(r2026.avgEmpContrib).toLocaleString('cs-CZ')} → ${e2040.toLocaleString('cs-CZ')} Kč`;
+      document.getElementById('kpi2040AnnualInflow').textContent = fmtMld(valPrice(r2040, r2040.totalInflow)) + ' Kč/rok';
+
+      document.getElementById('lbl-netDpsYield').textContent = `${r2026.netDpsYieldPct.toFixed(1).replace('.', ',')} % → ${r2040.netDpsYieldPct.toFixed(1).replace('.', ',')} % p.a.`;
+      document.getElementById('lbl-netTfYield').textContent = `${r2026.netTfYieldPct.toFixed(2).replace('.', ',')} % p.a.`;
+
+      renderWaterfallCards(r2025.totalAuM, cumClient, cumEmp, cumState, cumReturns, cumOutflows, aum2040);
+      renderTable(rows);
+      renderAllCharts();
+    }
+
+    function renderWaterfallCards(base2025, cumClient, cumEmp, cumState, cumReturns, cumOutflows, final2040) {
+      const container = document.getElementById('waterfallCards');
+      const items = [
+        { label: 'Základ 2025 (Audit)', val: base2025.toFixed(1).replace('.', ',') + ' mld.', sub: 'TF + DPS výchozí stav', color: 'border-l-4 border-l-slate-400' },
+        { label: '+ Úložky střadatelů', val: '+' + Math.round(cumClient) + ' mld.', sub: 'Kumulativně 2026–2040', color: 'border-l-4 border-l-blue-500' },
+        { label: '+ Příspěvky zaměstnavatelů', val: '+' + Math.round(cumEmp) + ' mld.', sub: 'Vč. zákona č. 324/2025 Sb.', color: 'border-l-4 border-l-indigo-500' },
+        { label: '+ Státní příspěvky', val: '+' + Math.round(cumState) + ' mld.', sub: 'Státní podpora MF ČR', color: 'border-l-4 border-l-sky-500' },
+        { label: '+ Čisté tržní zhodnocení', val: '+' + Math.round(cumReturns) + ' mld.', sub: 'Složené úročení po popl.', color: 'border-l-4 border-l-emerald-500' },
+        { label: '− Výplaty dávek a odbytné', val: '−' + Math.round(cumOutflows) + ' mld.', sub: `Konečné AuM: ${Math.round(final2040)} mld.`, color: 'border-l-4 border-l-rose-500' }
+      ];
+      container.innerHTML = items.map(it => `
+        <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] ${it.color}">
+          <div class="text-xs text-[var(--muted-foreground)]">${it.label}</div>
+          <div class="text-base font-bold text-[var(--foreground)] mt-0.5">${it.val}</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">${it.sub}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderTable(rows) {
+      const tbody = document.getElementById('modelTableBody');
+      tbody.innerHTML = rows.map(r => {
+        const isHist = r.year <= 2025;
+        const tot = valPrice(r, r.totalAuM);
+        const tf = valPrice(r, r.tfAuM);
+        const dps = valPrice(r, r.dpsAuM);
+        const dpsPct = ((r.dpsAuM / r.totalAuM) * 100).toFixed(1).replace('.', ',') + ' %';
+        const inf = valPrice(r, r.totalInflow);
+        const ret = valPrice(r, r.netReturn);
+        const out = valPrice(r, r.totalOutflow);
+        const cDps = Math.round(valPrice(r, r.avgClientDps));
+        const cEmp = Math.round(valPrice(r, r.avgEmpContrib));
+
+        return `
+          <tr class="${isHist ? 'bg-[var(--secondary)]/40 font-medium' : 'hover:bg-[var(--secondary)]/20'}">
+            <td class="py-2 px-3 sticky left-0 bg-[var(--card)] whitespace-nowrap">
+              <span class="font-bold">${r.year}</span>
+              ${isHist ? '<span class="ml-1 px-1.5 py-0.5 text-xs rounded bg-[var(--secondary)] text-[var(--muted-foreground)]">Audit</span>' : ''}
+            </td>
+            <td class="py-2 px-2.5 text-right font-bold">${tot.toFixed(1).replace('.', ',')}</td>
+            <td class="py-2 px-2.5 text-right text-amber-500 font-medium">${tf.toFixed(1).replace('.', ',')}</td>
+            <td class="py-2 px-2.5 text-right text-emerald-500 font-medium">${dps.toFixed(1).replace('.', ',')}</td>
+            <td class="py-2 px-2.5 text-right">${dpsPct}</td>
+            <td class="py-2 px-2.5 text-right">${Math.round(r.totalParticipants).toLocaleString('cs-CZ')}</td>
+            <td class="py-2 px-2.5 text-right">${cDps.toLocaleString('cs-CZ')}</td>
+            <td class="py-2 px-2.5 text-right">${cEmp.toLocaleString('cs-CZ')}</td>
+            <td class="py-2 px-2.5 text-right text-blue-500">+${inf.toFixed(1).replace('.', ',')}</td>
+            <td class="py-2 px-2.5 text-right ${ret >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${ret >= 0 ? '+' : ''}${ret.toFixed(1).replace('.', ',')}</td>
+            <td class="py-2 px-2.5 text-right text-rose-500">−${out.toFixed(1).replace('.', ',')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function getThemeColors() {
+      const style = getComputedStyle(document.documentElement);
+      const isLight = document.documentElement.classList.contains('light');
+      return {
+        fg: style.getPropertyValue('--foreground').trim() || (isLight ? '#0f172a' : '#f8fafc'),
+        muted: style.getPropertyValue('--muted-foreground').trim() || (isLight ? '#64748b' : '#94a3b8'),
+        border: style.getPropertyValue('--border').trim() || (isLight ? '#e2e8f0' : '#334155'),
+        isLight
+      };
+    }
+
+    function setupCanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function renderAllCharts() {
+      renderMainAuMChart();
+      renderCashFlowChart();
+      renderSecondaryChart();
+    }
+
+    function renderMainAuMChart() {
+      const { ctx, w, h } = setupCanvas('chartMainAuM');
+      const theme = getThemeColors();
+      const rows = simulationResults;
+      const showBand = document.getElementById('chkShowBand').checked;
+
+      ctx.clearRect(0, 0, w, h);
+      const pad = { top: 20, right: 24, bottom: 32, left: 56 };
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+
+      const maxVal = Math.max(...rows.map(r => valPrice(r, showBand ? r.p90AuM : r.totalAuM))) * 1.08;
+      const yTicks = 5;
+
+      ctx.strokeStyle = theme.border;
+      ctx.lineWidth = 1;
+      ctx.fillStyle = theme.muted;
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'right';
+
+      for (let i = 0; i <= yTicks; i++) {
+        const val = (maxVal / yTicks) * i;
+        const y = pad.top + plotH - (val / maxVal) * plotH;
+        ctx.beginPath();
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(w - pad.right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillText(Math.round(val) + ' mld.', pad.left - 8, y + 4);
+      }
+
+      const n = rows.length;
+      const groupW = plotW / n;
+      const barW = Math.min(28, groupW * 0.62);
+
+      if (showBand) {
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 1; i < n; i++) {
+          const x = pad.left + i * groupW + groupW / 2;
+          const y90 = pad.top + plotH - (valPrice(rows[i], rows[i].p90AuM) / maxVal) * plotH;
+          if (i === 1) ctx.moveTo(x, y90);
+          else ctx.lineTo(x, y90);
+        }
+        for (let i = n - 1; i >= 1; i--) {
+          const x = pad.left + i * groupW + groupW / 2;
+          const y10 = pad.top + plotH - (valPrice(rows[i], rows[i].p10AuM) / maxVal) * plotH;
+          ctx.lineTo(x, y10);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.12)';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      rows.forEach((r, i) => {
+        const cx = pad.left + i * groupW + groupW / 2;
+        const x = cx - barW / 2;
+
+        const segments = [
+          { val: valPrice(r, r.tfAuM), color: '#f59e0b' },
+          { val: valPrice(r, r.dpsConsAuM), color: '#0ea5e9' },
+          { val: valPrice(r, r.dpsBalAuM), color: '#6366f1' },
+          { val: valPrice(r, r.dpsDynAuM), color: '#10b981' }
+        ];
+
+        let curY = pad.top + plotH;
+        segments.forEach(seg => {
+          const segH = (seg.val / maxVal) * plotH;
+          ctx.fillStyle = seg.color;
+          ctx.fillRect(x, curY - segH, barW, segH);
+          curY -= segH;
+        });
+
+        ctx.fillStyle = i <= 1 ? theme.fg : theme.muted;
+        ctx.font = i <= 1 ? 'bold 12px sans-serif' : '12px sans-serif';
+        ctx.textAlign = 'center';
+        if (w > 540 || i % 2 === 0 || i === n - 1) {
+          ctx.fillText(String(r.year).slice(2) === '24' || String(r.year).slice(2) === '25' ? r.year + '*' : r.year, cx, h - 10);
+        }
+      });
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 2.5;
+      rows.forEach((r, i) => {
+        const cx = pad.left + i * groupW + groupW / 2;
+        const y = pad.top + plotH - (valPrice(r, r.totalAuM) / maxVal) * plotH;
+        if (i === 0) ctx.moveTo(cx, y);
+        else ctx.lineTo(cx, y);
+      });
+      ctx.stroke();
+
+      [1, 6, 11, 16].forEach(idx => {
+        if (!rows[idx]) return;
+        const r = rows[idx];
+        const cx = pad.left + idx * groupW + groupW / 2;
+        const val = valPrice(r, r.totalAuM);
+        const y = pad.top + plotH - (val / maxVal) * plotH;
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(cx, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = theme.fg;
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(Math.round(val) + ' mld.', cx, Math.max(14, y - 8));
+      });
+    }
+
+    function renderCashFlowChart() {
+      const { ctx, w, h } = setupCanvas('chartCashFlow');
+      const theme = getThemeColors();
+      const rows = simulationResults.slice(2);
+
+      ctx.clearRect(0, 0, w, h);
+      const pad = { top: 18, right: 16, bottom: 28, left: 46 };
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+
+      let maxPos = 0;
+      let maxNeg = 0;
+      rows.forEach(r => {
+        const inf = valPrice(r, r.totalInflow);
+        const ret = valPrice(r, r.netReturn);
+        const out = valPrice(r, r.totalOutflow);
+        maxPos = Math.max(maxPos, inf + Math.max(0, ret));
+        maxNeg = Math.max(maxNeg, out + Math.max(0, -ret));
+      });
+      maxPos *= 1.12;
+      maxNeg *= 1.15;
+      const totalSpan = maxPos + maxNeg;
+      const zeroY = pad.top + (maxPos / totalSpan) * plotH;
+
+      ctx.strokeStyle = theme.border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, zeroY);
+      ctx.lineTo(w - pad.right, zeroY);
+      ctx.stroke();
+
+      ctx.fillStyle = theme.muted;
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('0', pad.left - 6, zeroY + 4);
+      ctx.fillText('+' + Math.round(maxPos * 0.8), pad.left - 6, pad.top + plotH * 0.15);
+      ctx.fillText('−' + Math.round(maxNeg * 0.8), pad.left - 6, h - pad.bottom - 4);
+
+      const n = rows.length;
+      const groupW = plotW / n;
+      const barW = Math.min(18, groupW * 0.58);
+
+      rows.forEach((r, i) => {
+        const cx = pad.left + i * groupW + groupW / 2;
+        const x = cx - barW / 2;
+
+        const inf = valPrice(r, r.totalInflow);
+        const ret = valPrice(r, r.netReturn);
+        const out = valPrice(r, r.totalOutflow);
+
+        const infH = (inf / totalSpan) * plotH;
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillRect(x, zeroY - infH, barW, infH);
+
+        if (ret >= 0) {
+          const retH = (ret / totalSpan) * plotH;
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(x, zeroY - infH - retH, barW, retH);
+        } else {
+          const retH = (Math.abs(ret) / totalSpan) * plotH;
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(x, zeroY + (out / totalSpan) * plotH, barW, retH);
+        }
+
+        const outH = (out / totalSpan) * plotH;
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(x, zeroY, barW, outH);
+
+        if (i % 3 === 0 || i === n - 1) {
+          ctx.fillStyle = theme.muted;
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(r.year, cx, h - 8);
+        }
+      });
+    }
+
+    function renderSecondaryChart() {
+      const { ctx, w, h } = setupCanvas('chartSecondary');
+      const theme = getThemeColors();
+      const rows = simulationResults;
+
+      ctx.clearRect(0, 0, w, h);
+      const pad = { top: 20, right: 20, bottom: 28, left: 50 };
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+
+      let series = [];
+      if (subChartMode === 'contrib') {
+        series = [
+          { label: 'Zaměstnavatel', color: '#6366f1', data: rows.map(r => valPrice(r, r.avgEmpContrib)) },
+          { label: 'Účastník DPS', color: '#10b981', data: rows.map(r => valPrice(r, r.avgClientDps)) },
+          { label: 'Účastník TF', color: '#f59e0b', data: rows.map(r => valPrice(r, r.avgClientTf)) }
+        ];
+      } else {
+        series = [
+          { label: 'Účastníci DPS (tis.)', color: '#10b981', data: rows.map(r => r.dpsParticipants) },
+          { label: 'Se zaměstnavatelem (tis.)', color: '#6366f1', data: rows.map(r => r.empParticipants) },
+          { label: 'Účastníci TF (tis.)', color: '#f59e0b', data: rows.map(r => r.tfParticipants) }
+        ];
+      }
+
+      const maxVal = Math.max(...series.flatMap(s => s.data)) * 1.12;
+      const n = rows.length;
+
+      ctx.strokeStyle = theme.border;
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const v = (maxVal / 4) * i;
+        const y = pad.top + plotH - (v / maxVal) * plotH;
+        ctx.beginPath();
+        ctx.setLineDash([2, 3]);
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(w - pad.right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = theme.muted;
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(v), pad.left - 6, y + 4);
+      }
+
+      series.forEach(s => {
+        ctx.beginPath();
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2.2;
+        s.data.forEach((v, i) => {
+          const x = pad.left + (i / (n - 1)) * plotW;
+          const y = pad.top + plotH - (v / maxVal) * plotH;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      });
+
+      rows.forEach((r, i) => {
+        if (i % 3 === 0 || i === n - 1) {
+          const x = pad.left + (i / (n - 1)) * plotW;
+          ctx.fillStyle = theme.muted;
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(r.year, x, h - 8);
+        }
+      });
+
+      let lx = pad.left;
+      series.forEach(s => {
+        ctx.fillStyle = s.color;
+        ctx.fillRect(lx, 4, 10, 10);
+        ctx.fillStyle = theme.fg;
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(s.label, lx + 14, 13);
+        lx += ctx.measureText(s.label).width + 28;
+      });
+    }
+
+    function exportCSV() {
+      const headers = [
+        'Rok', 'Status', 'Celkem_AuM_mld_CZK', 'TF_AuM_mld_CZK', 'DPS_AuM_mld_CZK',
+        'DPS_Konzervativni_mld', 'DPS_Vyvazene_mld', 'DPS_Dynamicke_mld',
+        'Ucastnici_Celkem_tis', 'Ucastnici_TF_tis', 'Ucastnici_DPS_tis', 'Ucastnici_Zamestnavatel_tis',
+        'Prum_Ulozka_DPS_CZK', 'Prum_Ulozka_TF_CZK', 'Prum_Prispevek_Zamestnavatel_CZK',
+        'Pritok_Celkem_mld', 'Cisty_Vynos_mld', 'Odtok_Vyplaty_mld'
+      ];
+      const csvRows = [headers.join(';')];
+      simulationResults.forEach(r => {
+        csvRows.push([
+          r.year,
+          r.status,
+          valPrice(r, r.totalAuM).toFixed(2),
+          valPrice(r, r.tfAuM).toFixed(2),
+          valPrice(r, r.dpsAuM).toFixed(2),
+          valPrice(r, r.dpsConsAuM).toFixed(2),
+          valPrice(r, r.dpsBalAuM).toFixed(2),
+          valPrice(r, r.dpsDynAuM).toFixed(2),
+          r.totalParticipants.toFixed(1),
+          r.tfParticipants.toFixed(1),
+          r.dpsParticipants.toFixed(1),
+          r.empParticipants.toFixed(1),
+          Math.round(valPrice(r, r.avgClientDps)),
+          Math.round(valPrice(r, r.avgClientTf)),
+          Math.round(valPrice(r, r.avgEmpContrib)),
+          valPrice(r, r.totalInflow).toFixed(2),
+          valPrice(r, r.netReturn).toFixed(2),
+          valPrice(r, r.totalOutflow).toFixed(2)
+        ].join(';'));
+      });
+
+      const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `model_penzijni_system_AuM_2024_2040_${priceMode}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener('resize', () => renderAllCharts());
+    window.addEventListener('DOMContentLoaded', () => {
+      onParamChange(false);
+    });
+  </script>
+</body>
+</html>
