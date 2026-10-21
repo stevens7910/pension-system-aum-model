@@ -15,4 +15,14 @@ Model je ukotven na oficiálních statistikách **Asociace penzijních společno
 - **Nominální vs. Reálné zobrazení & Export:** Okamžité přepínání mezi nominálními cenami a reálnými cenami roku 2026, dekompozice změny AuM (Waterfall) a export kompletní časové řady 2024–2040 do **CSV**.
 
 ## Spuštění
-Aplikace je plně samostatná (single-file HTML/JS). Stačí otevřít soubor `index.html` v libovolném moderním webovém prohlížeči nebo přes GitHub Pages.
+
+### 1. Samostatná webová aplikace (HTML/JS)
+Stačí otevřít soubor `index.html` v libovolném moderním webovém prohlížeči nebo přes GitHub Pages.
+
+### 2. Streamlit aplikace (Python / Streamlit Community Cloud)
+Pro spuštění v prostředí **Streamlit**:
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+Pro nasazení na **Streamlit Community Cloud** (share.streamlit.io) stačí propojit tento GitHub repozitář (`stevens7910/pension-system-aum-model`), zvolit větev `main` a jako hlavní soubor zadat `streamlit_app.py`.
